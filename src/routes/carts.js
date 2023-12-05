@@ -1,25 +1,30 @@
 const express = require('express');
-const fs = require('fs');
-
+const cartManager = require('../managers/cartManager');
 const router = express.Router();
-
-const CARTS_FILE = 'carrito.json';
 
 router.post('/', (req, res) => {
   const newCart = req.body;
-  res.json(newCart);
+  const cart = cartManager.addCart(newCart);
+  res.json(cart);
 });
 
 router.get('/:cid', (req, res) => {
   const cartId = req.params.cid;
-  res.json(cartProducts);
+  const cart = cartManager.getCartById(cartId);
+  res.json(cart ? cart.products : []);
 });
 
 router.post('/:cid/product/:pid', (req, res) => {
   const cartId = req.params.cid;
   const productId = req.params.pid;
   const { quantity } = req.body;
-  res.json({ message: 'Producto agregado al carrito exitosamente' });
+  const result = cartManager.addProductToCart(cartId, productId, quantity);
+  if (result) {
+    res.json(result);
+  } else {
+    res.status(404).json({ message: 'Carrito no encontrado' });
+  }
 });
 
 module.exports = router;
+
