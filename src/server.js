@@ -1,47 +1,99 @@
+const express = require('express');
+const mongoose = require('mongoose');
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
+const session = require('express-session');
+const MongoStore = require('connect-mongo')(session);
+const User = require('./models/userModel');
 
+const app = express();
 
-app.get('/api/products', async (req, res) => {
+mongoose.connect('mongodb://localhost:27017/your-database-name', { useNewUrlParser: true, useUnifiedTopology: true });
+
+passport.use(new LocalStrategy({
+  usernameField: 'email',
+  passwordField: 'password',
+}, async (email, password, done) => {
   try {
-    const { limit = 10, page = 1, sort, query } = req.query;
+    const user = await User.findOne({ email });
 
-    const skip = (page - 1) * limit;
-    const sortOption = sort === 'desc' ? -1 : 1;
-    
-    const filter = query ? { category: query } : {};
+    if (!user) {
+      return done(null, false, { message: 'Usuario no encontrado' });
+    }
 
-    const products = await ProductModel.find(filter)
-      .sort({ price: sortOption })
-      .limit(parseInt(limit))
-      .skip(skip);
+    const isMatch = await user.comparePassword(password);
 
-    const totalProducts = await ProductModel.countDocuments(filter);
-    const totalPages = Math.ceil(totalProducts / limit);
-    const hasNextPage = page < totalPages;
-    const hasPrevPage = page > 1;
-    const nextPage = hasNextPage ? page + 1 : null;
-    const prevPage = hasPrevPage ? page - 1 : null;
-    const prevLink = hasPrevPage ? `/api/products?limit=${limit}&page=${prevPage}&sort=${sort}&query=${query}` : null;
-    const nextLink = hasNextPage ? `/api/products?limit=${limit}&page=${nextPage}&sort=${sort}&query=${query}` : null;
+    if (!isMatch) {
+      return done(null, false, { message: 'Contraseña incorrecta' });
+    }
 
-    res.status(200).json({
-      status: 'success',
-      payload: products,
-      totalPages,
-      prevPage,
-      nextPage,
-      page,
-      hasPrevPage,
-      hasNextPage,
-      prevLink,
-      nextLink,
-    });
+    return done(null, user);
   } catch (error) {
-    res.status(500).json({ status: 'error', error: 'Error al obtener los productos' });
+    return done(error);
+  }
+}));
+
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await User.findById(id);
+    done(null, user);
+  } catch (error) {
+    done(error);
   }
 });
 
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(session({
+  secret: 'your-secret-key',
+  resave: false,
+  saveUninitialized: true,
+  store: new MongoStore({ mongooseConnection: mongoose.connection }),
+}));
+app.use(passport.initialize());
+app.use(passport.session());
 
-app.use('/api/carts', require('./src/routes/carts'));
+app.get('/login', (req, res) => {
+  res.render('login');
+});
+
+app.post('/login', passport.authenticate('local', {
+  successRedirect: '/api/products',
+  failureRedirect: '/login',
+}));
+
+app.get('/register', (req, res) => {
+  res.render('register');
+});
+
+app.post('/register', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = new User({ email, password });
+    await user.save();
+    res.redirect('/api/products');
+  } catch (error) {
+    res.status(500).json({ error: 'Error al registrar el usuario' });
+  }
+});
+
+app.get('/logout', (req, res) => {
+  req.logout();
+  res.redirect('/login');
+});
+
+
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
+
+
 
 
 
