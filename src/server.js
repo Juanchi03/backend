@@ -1,12 +1,14 @@
+
 const express = require('express');
 const mongoose = require('mongoose');
-const passport = require('./passport');
+const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const GitHubStrategy = require('passport-github').Strategy;
 const flash = require('connect-flash');
 const session = require('express-session');
-const User = require('./models/userModel');
 const bcrypt = require('bcrypt');
+const User = require('./models/userModel');
+const sessionRoutes = require('./sessionRoutes'); 
 
 const app = express();
 
@@ -24,6 +26,7 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(flash());
+
 
 passport.use('local-register', new LocalStrategy({
   usernameField: 'email',
@@ -106,44 +109,15 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
-app.get('/login', (req, res) => {
-  res.render('login', { message: req.flash('error') });
-});
+app.use('/api/sessions', sessionRoutes);
 
-app.post('/login', passport.authenticate('local-login', {
-  successRedirect: '/api/products',
-  failureRedirect: '/login',
-  failureFlash: true,
-}));
 
-app.get('/register', (req, res) => {
-  res.render('register', { message: req.flash('error') });
-});
-
-app.post('/register', passport.authenticate('local-register', {
-  successRedirect: '/api/products',
-  failureRedirect: '/register',
-  failureFlash: true,
-}));
-
-app.get('/auth/github', passport.authenticate('github'));
-
-app.get('/auth/github/callback',
-  passport.authenticate('github', {
-    successRedirect: '/api/products',
-    failureRedirect: '/login',
-  })
-);
-
-app.get('/logout', (req, res) => {
-  req.logout();
-  res.redirect('/login');
-});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
 
 
 
