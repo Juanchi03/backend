@@ -1,4 +1,4 @@
-const Product = require('./models/productModel');
+const Product = require('../models/productModel');
 
 class ProductDao {
   async getAllProducts() {
@@ -43,4 +43,5 @@ class ProductDao {
 }
 
 module.exports = new ProductDao();
+
 

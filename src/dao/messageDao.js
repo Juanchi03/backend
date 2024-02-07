@@ -1,9 +1,9 @@
-import { find, create } from './models/messageModel';
+const Message = require('../models/messageModel');
 
 class MessageDao {
   async getAllMessages() {
     try {
-      return await find();
+      return await Message.find();
     } catch (error) {
       throw new Error('Error al obtener todos los mensajes');
     }
@@ -11,11 +11,12 @@ class MessageDao {
 
   async addMessage(newMessage) {
     try {
-      return await create(newMessage);
+      return await Message.create(newMessage);
     } catch (error) {
       throw new Error('Error al agregar el mensaje');
     }
   }
 }
 
-export default new MessageDao();
+module.exports = new MessageDao();
+
