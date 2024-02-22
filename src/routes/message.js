@@ -22,7 +22,5 @@ router.post('/', async (req, res) => {
 });
 
 module.exports = router;
-const express = require('express');
-const router = express.Router();
-const MessageController = require('../controllers/messageController');
+
 
